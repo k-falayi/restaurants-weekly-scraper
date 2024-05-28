@@ -27,4 +27,4 @@ jobs:
       env:
         GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
       run: |
-        python your_scraper_script.py
+        python scraper.py
