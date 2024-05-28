@@ -125,6 +125,7 @@ df4b.to_csv('topviolators.csv')
 
 # A rated restaurants
 df5 = df3[(df3.grade == "A")]
+print(len(df5))
 
 # Phoenix A-rated restaurants
 df5a = df5[df5.city == "Phoenix"]
