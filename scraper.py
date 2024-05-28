@@ -8,7 +8,6 @@ import time
 import sys
 import numpy as np
 import requests
-import getpass
 import os
 import json
 
@@ -161,7 +160,3 @@ sheet_phoenix.update('A1', [df5a.columns.values.tolist()] + data_list_5a)
 sheet_scottsdale.update('A1', [df5b.columns.values.tolist()] + data_list_5b)
 sheet_east_valley.update('A1', [df5c.columns.values.tolist()] + data_list_5c)
 sheet_west_valley.update('A1', [df5d.columns.values.tolist()] + data_list_5d)
-
-
-
-
