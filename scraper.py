@@ -76,18 +76,24 @@ df3 = df2[~df2.biz.str.contains("Children|School|Food City|7-Eleven|Sheraton Pho
                                 Chipotle|Golf|Subway|Outback Steakhouse|Shell|AJ's Fine Foods|McDonalds|Jimmy John|Ice Cream|Market|Inn|Suites|LLC|Deli|Denny's|College|Farms|Farm|\
                                 Popeyes|Express|Panera Bread|ARCO|Senior", case=False, regex=True)].copy()
 
+# Summary data list
+summary_data = []
+
 # Number of restaurants inspected this week
 ins = df['permit_ID'].count()
-print(ins, "restaurants were inspected in the week", friday_date_str)
+summary_data.append([f"{ins} restaurants were inspected in the week {friday_date_str}"])
 
 # Restaurants with 4 priority violations and above
 df3['pv'] = df3.pv.astype(int)
 df4 = df3[df3['pv'] > 3]
 
 if len(df4) == 0:
-    sys.exit("No restaurant had more than 3 priority violations of", friday_date_str)
+    summary_data.append([f"No restaurant had more than 3 priority violations of {friday_date_str}"])
+    sheet_summary = sheet.worksheet('Summary')
+    sheet_summary.update('A1', summary_data)
+    sys.exit()
 else:
-    print(f"{len(df4)} restaurants had more than 3 priority violations")
+    summary_data.append([f"{len(df4)} restaurants had more than 3 priority violations"])
 
 # Use the environment variable for the API key
 api_key = os.getenv('GOOGLE_MAPS_API_KEY')
@@ -125,7 +131,7 @@ df4b.to_csv('topviolators.csv')
 
 # A rated restaurants
 df5 = df3[(df3.grade == "A")]
-print(len(df5))
+summary_data.append([f"{len(df5)} restaurants were rated 'A'"])
 
 # Phoenix A-rated restaurants
 df5a = df5[df5.city == "Phoenix"]
@@ -147,6 +153,7 @@ sheet_phoenix = sheet.worksheet('Phoenix')
 sheet_scottsdale = sheet.worksheet('Scottsdale')
 sheet_east_valley = sheet.worksheet('eastValley')
 sheet_west_valley = sheet.worksheet('westValley')
+sheet_summary = sheet.worksheet('Summary')
 
 # Convert DataFrame to list of lists
 data_list_4b = df4b.values.tolist()
@@ -161,3 +168,4 @@ sheet_phoenix.update('A1', [df5a.columns.values.tolist()] + data_list_5a)
 sheet_scottsdale.update('A1', [df5b.columns.values.tolist()] + data_list_5b)
 sheet_east_valley.update('A1', [df5c.columns.values.tolist()] + data_list_5c)
 sheet_west_valley.update('A1', [df5d.columns.values.tolist()] + data_list_5d)
+sheet_summary.update('A1', summary_data)
