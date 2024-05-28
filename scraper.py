@@ -78,14 +78,14 @@ df3 = df2[~df2.biz.str.contains("Children|School|Food City|7-Eleven|Sheraton Pho
 
 # Number of restaurants inspected this week
 ins = df['permit_ID'].count()
-print(ins, "restaurants were inspected in the week", )
+print(ins, "restaurants were inspected in the week", friday_date_str)
 
 # Restaurants with 4 priority violations and above
 df3['pv'] = df3.pv.astype(int)
 df4 = df3[df3['pv'] > 3]
 
 if len(df4) == 0:
-    sys.exit("No restaurant had more than 3 priority violations")
+    sys.exit("No restaurant had more than 3 priority violations of", friday_date_str)
 else:
     print(f"{len(df4)} restaurants had more than 3 priority violations")
 
