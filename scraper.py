@@ -38,7 +38,10 @@ chrome_options.add_argument("--no-sandbox")
 chrome_options.add_argument("window-size=1400,800")
 
 # Initialize the WebDriver with options
-driver = webdriver.Chrome(executable_path=ChromeDriverManager().install(), options=chrome_options)
+chrome_driver_path = ChromeDriverManager().install()
+chrome_options.binary_location = chrome_driver_path
+
+driver = webdriver.Chrome(options=chrome_options)
 
 driver.get("https://envapp.maricopa.gov/Report/WeeklyReport")
 
