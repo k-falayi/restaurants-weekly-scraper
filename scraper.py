@@ -2,21 +2,17 @@ import pandas as pd
 from bs4 import BeautifulSoup as bs
 import time
 import sys
-import os
 import json
-import numpy as np
+import os
 import requests
-from oauth2client.service_account import ServiceAccountCredentials
-import gspread
 from datetime import datetime, timedelta
-
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import ElementClickInterceptedException
-from selenium.webdriver.support.ui import Select
-
+from selenium.common.exceptions import ElementClickInterceptedException, TimeoutException
+from oauth2client.service_account import ServiceAccountCredentials
+import gspread
 from webdriver_manager.chrome import ChromeDriverManager
 
 # Define the scope
@@ -36,15 +32,12 @@ client = gspread.authorize(creds)
 # Get the Google Sheet
 sheet = client.open('Restaurant_inspection_database(auto_scraper)')
 
-
-chrome_options = webdriver.ChromeOptions()    
-chrome_options.add_argument("--disable-dev-shm-usage")    
-chrome_options.add_argument("--no-sandbox")       
-    # Set window size   
+chrome_options = webdriver.ChromeOptions()
+chrome_options.add_argument("--disable-dev-shm-usage")
+chrome_options.add_argument("--no-sandbox")
 chrome_options.add_argument("window-size=1400,800")
 
-driver = webdriver.Chrome(ChromeDriverManager().install())
-
+driver = webdriver.Chrome(ChromeDriverManager().install(), options=chrome_options)
 
 driver.get("https://envapp.maricopa.gov/Report/WeeklyReport")
 
@@ -101,7 +94,6 @@ all_rows = []
 # Parse the table HTML with BeautifulSoup
 soup = bs(driver.page_source, 'html.parser')
 table = soup.find('table', {'id': 'weekly-report-table'})
-
 
 # Extract table headers
 headers = []
@@ -177,6 +169,7 @@ df3 = df2[~df2['Business Name'].str.contains("Children|School|Food City|7-Eleven
 
 # Number of restaurants inspected this week
 ins = df['Permit ID'].count()
+summary_data = []
 summary_data.append([f"{ins} restaurants were inspected in the week of {friday_date_str}"])
 
 # Restaurants with 4 priority violations and above
