@@ -41,7 +41,8 @@ chrome_options.add_argument("--disable-gpu")
 chrome_options.add_argument("--remote-debugging-port=9222")
 
 # Initialize the WebDriver with options
-driver = webdriver.Chrome(ChromeDriverManager().install(), options=chrome_options)
+driver_path = ChromeDriverManager().install()
+driver = webdriver.Chrome(executable_path=driver_path, options=chrome_options)
 
 driver.get("https://envapp.maricopa.gov/Report/WeeklyReport")
 
