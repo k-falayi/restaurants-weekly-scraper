@@ -37,7 +37,8 @@ chrome_options.add_argument("--disable-dev-shm-usage")
 chrome_options.add_argument("--no-sandbox")
 chrome_options.add_argument("window-size=1400,800")
 
-driver = webdriver.Chrome(ChromeDriverManager().install(), options=chrome_options)
+# Initialize the WebDriver with options
+driver = webdriver.Chrome(executable_path=ChromeDriverManager().install(), options=chrome_options)
 
 driver.get("https://envapp.maricopa.gov/Report/WeeklyReport")
 
