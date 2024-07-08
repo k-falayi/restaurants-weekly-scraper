@@ -2,6 +2,7 @@ import pandas as pd
 from bs4 import BeautifulSoup as bs
 import time
 import sys
+import os
 from datetime import datetime, timedelta
 
 from selenium import webdriver
