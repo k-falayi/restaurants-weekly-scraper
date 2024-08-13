@@ -18,10 +18,20 @@ jobs:
       with:
         python-version: '3.x'
 
-    - name: Install Google Chrome
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y google-chrome-stable
+    - name: Installed package list
+      run: apt list --installed
+
+    - name: Remove Chrome
+      run: sudo apt purge google-chrome-stable
+
+    - name: Remove default Chromium
+      run: sudo apt purge chromium-browser
+
+    - name: Install a new Chromium
+      run: sudo apt install -y chromium-browser
+
+    - name: Install all necessary packages
+      run: pip install webdriver-manager selenium
 
     - name: Install dependencies
       run: |
