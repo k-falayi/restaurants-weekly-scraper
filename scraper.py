@@ -73,6 +73,7 @@ friday_date_str = third_last_friday.strftime("%m-%d-%Y")
 date_input = driver.find_element(By.ID, 'endDate')
 date_input.clear()  # Clear the input field before entering the date
 desired_date = friday_date_str
+print('scraping', desired_date)
 date_input.send_keys(desired_date)
 
 # Wait for the reCAPTCHA iframe to be present and handle it
