@@ -18,7 +18,7 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from bs4 import BeautifulSoup as bs
 import sys
-from selenium.common.exceptions import ElementClickInterceptedException
+from selenium.common.exceptions import ElementClickInterceptedException, NoSuchElementException
 
 # Define the scope for Google Sheets API
 scope = [
@@ -114,7 +114,8 @@ all_rows.append(headers)
 for tr in table.find('tbody').find_all('tr'):
     cells = tr.find_all('td')
     row = [cell.text.strip() for cell in cells]
-    all_rows.append(row)
+    if len(row) == len(headers):  # Only add rows with the correct number of columns
+        all_rows.append(row)
 
 # Iterate over each page
 while True:
@@ -142,10 +143,17 @@ while True:
         for tr in table.find('tbody').find_all('tr'):
             cells = tr.find_all('td')
             row = [cell.text.strip() for cell in cells]
-            all_rows.append(row)
-    except Exception as e:
+            if len(row) == len(headers):  # Only add rows with the correct number of columns
+                all_rows.append(row)
+    except NoSuchElementException as e:
         print(f"Finished scraping. Last page reached or an error occurred: {e}")
         break
+
+# Check if the table was properly scraped
+if len(all_rows) <= 1:
+    print("No data was scraped. Exiting.")
+    driver.quit()
+    sys.exit()
 
 # Create a DataFrame
 df = pd.DataFrame(all_rows[1:], columns=all_rows[0])
