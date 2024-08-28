@@ -18,7 +18,8 @@ from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import ElementClickInterceptedException
 from bs4 import BeautifulSoup as bs
-from oauth2client.service_account import ServiceAccountCredentials 
+from oauth2client.service_account import ServiceAccountCredentials
+import gspread
 
 # Define the scope
 scope = ["https://spreadsheets.google.com/feeds", 'https://www.googleapis.com/auth/spreadsheets',
