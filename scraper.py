@@ -1,6 +1,7 @@
 # All of the necessary imports
 from bs4 import BeautifulSoup as bs
 import pandas as pd
+import json
 import time
 import io
 import os
