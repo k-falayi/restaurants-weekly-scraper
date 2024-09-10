@@ -94,6 +94,7 @@ WebDriverWait(driver, 20).until(
 # Parse the table HTML with BeautifulSoup
 soup = bs(driver.page_source, 'html.parser')
 table = soup.find('table', {'id': 'weekly-report-table'})
+print(table)
 
 # Check if the table is found
 if not table:
