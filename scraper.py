@@ -214,6 +214,7 @@ while True:
 
 # Create a DataFrame from the scraped data
 df = pd.DataFrame(all_rows[1:], columns=all_rows[0])
+print(len(df))
 
 # Quit the driver after the scraping and updating is complete
 driver.quit()
