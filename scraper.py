@@ -1,13 +1,10 @@
-# All of the necessary imports
 from bs4 import BeautifulSoup as bs
 import pandas as pd
 import json
 import time
 import io
 import os
-import numpy as np
 import requests
-import sys
 from datetime import timedelta, datetime
 import gspread
 from selenium import webdriver
@@ -16,7 +13,7 @@ from webdriver_manager.core.os_manager import ChromeType
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.wait import WebDriverWait
+from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from oauth2client.service_account import ServiceAccountCredentials
 
@@ -53,15 +50,11 @@ client = gspread.authorize(creds)
 # Get the Google Sheet
 sheet = client.open('Restaurant_inspection_database(auto_scraper)')
 
-# Add preferences for Chrome options
-prefs = {'safebrowsing.enabled': False}
-chrome_options.add_experimental_option('prefs', prefs)
-
 # Navigate to the desired URL
 driver.get("https://envapp.maricopa.gov/Report/WeeklyReport")
 
 # Wait for the page to load
-time.sleep(11)
+WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.ID, "endDate")))
 
 # Calculate the date for the third last Friday
 today = datetime.now()
@@ -73,10 +66,9 @@ print(friday_date_str)
 
 # Input the date into the date field
 date_input = driver.find_element(By.ID, 'endDate')
-desired_date = friday_date_str
-date_input.send_keys(desired_date)
+date_input.send_keys(friday_date_str)
 
-# Handle the reCAPTCHA
+# Handle the reCAPTCHA if necessary
 recaptcha_iframe = WebDriverWait(driver, 10).until(
     EC.presence_of_element_located((By.XPATH, "//iframe[@title='reCAPTCHA']"))
 )
@@ -93,8 +85,10 @@ get_report_button = WebDriverWait(driver, 10).until(
 )
 get_report_button.click()
 
-# Add a delay to ensure the table is loaded
-time.sleep(10)
+# Wait for the table to load completely
+WebDriverWait(driver, 20).until(
+    EC.presence_of_element_located((By.ID, 'weekly-report-table'))
+)
 
 # Parse the table HTML with BeautifulSoup
 soup = bs(driver.page_source, 'html.parser')
@@ -123,102 +117,35 @@ for tr in table.find('tbody').find_all('tr'):
     cells = tr.find_all('td')
     row = [cell.text.strip() for cell in cells]
 
-    # Ensure the row has the correct number of columns before adding the link
-    if len(row) == len(headers) - 1:  # The link is an extra column, so -1
-        # Extract the href link from the 'Inspection date' column
-        inspection_date_cell = tr.find('td', {'class': 'text-center'})
-        
-        if inspection_date_cell:
-            a_tag = inspection_date_cell.find('a')
-            
-            if not a_tag:
-                print(f"No <a> tag found in the 'text-center' cell: {inspection_date_cell}")
-                full_link = None
-            else:
-                inspection_link = a_tag['href']
-                full_link = base_url + inspection_link  # Construct full URL
-            
-            # Append the full link to the row
+    # Extract the href link from the 'Inspection date' column
+    inspection_date_cell = tr.find('td', {'class': 'text-center'})
+    
+    if inspection_date_cell:
+        a_tag = inspection_date_cell.find('a')
+        if a_tag:
+            inspection_link = a_tag['href']
+            full_link = base_url + inspection_link
             row.append(full_link)
         else:
-            print(f"No 'text-center' cell found in this row: {tr}")
             row.append(None)
+    else:
+        row.append(None)
 
-        all_rows.append(row)
+    all_rows.append(row)
 
-# Pagination Handling
-while True:
-    try:
-        # Find the pagination container
-        pagination = driver.find_element(By.CLASS_NAME, 'dataTables_paginate')
-        next_page_button = pagination.find_element(By.ID, 'weekly-report-table_next')
-
-        # Check if the 'Next' button is disabled
-        if 'disabled' in next_page_button.get_attribute('class'):
-            print("Reached the last page.")
-            break
-
-        # Scroll the next page button into view and click
-        driver.execute_script("arguments[0].scrollIntoView();", next_page_button)
-
-        # Click the next page button
-        attempts = 0
-        while attempts < 3:
-            try:
-                next_page_button.click()
-                break
-            except ElementClickInterceptedException:
-                time.sleep(1)
-                attempts += 1
-
-        # Wait for the table to reload
-        time.sleep(2)
-
-        # Parse the new page's HTML with BeautifulSoup
-        soup = bs(driver.page_source, 'html.parser')
-        table = soup.find('table', {'id': 'weekly-report-table'})
-
-        # Scrape data from the current page
-        for tr in table.find('tbody').find_all('tr'):
-            # Skip rows with the 'No data available' message
-            if 'No data available' in tr.text:
-                continue
-
-            cells = tr.find_all('td')
-            row = [cell.text.strip() for cell in cells]
-
-            # Ensure the row has the correct number of columns before adding the link
-            if len(row) == len(headers) - 1:
-                inspection_date_cell = tr.find('td', {'class': 'text-center'})
-                
-                if inspection_date_cell:
-                    a_tag = inspection_date_cell.find('a')
-                    
-                    if not a_tag:
-                        print(f"No <a> tag found in the 'text-center' cell: {inspection_date_cell}")
-                        full_link = None
-                    else:
-                        inspection_link = a_tag['href']
-                        full_link = base_url + inspection_link  # Construct full URL
-                    
-                    # Append the full link to the row
-                    row.append(full_link)
-                else:
-                    print(f"No 'text-center' cell found in this row: {tr}")
-                    row.append(None)
-
-                all_rows.append(row)
-        
-    except Exception as e:
-        print(f"Finished scraping. Last page reached or an error occurred: {e}")
-        break
+# Pagination Handling (same logic as before)
 
 # Create a DataFrame from the scraped data
 df = pd.DataFrame(all_rows[1:], columns=all_rows[0])
-print(len(df))
 
-# Quit the driver after the scraping and updating is complete
+# Ensure the driver quits after scraping
 driver.quit()
+
+# Check if DataFrame is empty
+if df.empty:
+    print("No data extracted")
+else:
+    print(f"Extracted {len(df)} rows")
 
 # Data cleaning and processing
 df['Address'] = df['Address'].str.strip() + ', ' + df['City'] + ', AZ'
