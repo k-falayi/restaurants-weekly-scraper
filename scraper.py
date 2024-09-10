@@ -88,7 +88,7 @@ get_report_button.click()
 
 # Wait for the table to load completely
 WebDriverWait(driver, 20).until(
-    EC.presence_of_element_located((By.ID, 'weekly-report-table'))
+    EC.presence_of_element_located((By.CSS_SELECTOR, "#weekly-report-table tbody tr"))
 )
 
 # Parse the table HTML with BeautifulSoup
