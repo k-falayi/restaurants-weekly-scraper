@@ -93,7 +93,6 @@ WebDriverWait(driver, 20).until(
 
 # Parse the table HTML with BeautifulSoup
 soup = bs(driver.page_source, 'html.parser')
-print(soup)
 table = soup.find('table', {'id': 'weekly-report-table'})
 print(table)
 
