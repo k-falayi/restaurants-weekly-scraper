@@ -19,6 +19,7 @@ from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from oauth2client.service_account import ServiceAccountCredentials
 
+# Setup Chrome WebDriver with options
 chrome_service = Service(ChromeDriverManager(chrome_type=ChromeType.CHROMIUM).install())
 
 chrome_options = Options()
@@ -36,8 +37,7 @@ for option in options:
 
 driver = webdriver.Chrome(service=chrome_service, options=chrome_options)
 
-
-# Define the scope
+# Define the scope for Google Sheets API
 scope = ["https://spreadsheets.google.com/feeds", 'https://www.googleapis.com/auth/spreadsheets',
          "https://www.googleapis.com/auth/drive.file", "https://www.googleapis.com/auth/drive"]
 
@@ -45,88 +45,69 @@ scope = ["https://spreadsheets.google.com/feeds", 'https://www.googleapis.com/au
 credentials_json = os.environ.get('GOOGLE_SHEETS_CREDENTIALS')
 creds_dict = json.loads(credentials_json)
 
-# Add your service account file
+# Create credentials and authorize the client sheet
 creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
-
-# Authorize the clientsheet
 client = gspread.authorize(creds)
 
 # Get the Google Sheet
 sheet = client.open('Restaurant_inspection_database(auto_scraper)')
 
-
-# Add preferences
-prefs = {
-    'safebrowsing.enabled': False
-}
+# Add preferences for Chrome options
+prefs = {'safebrowsing.enabled': False}
 chrome_options.add_experimental_option('prefs', prefs)
-
 
 # Navigate to the desired URL
 driver.get("https://envapp.maricopa.gov/Report/WeeklyReport")
 
-# Wait for 9 seconds
+# Wait for the page to load
 time.sleep(11)
 
 # Calculate the date for the third last Friday
 today = datetime.now()
-# Find the most recent Friday
 days_to_friday = (today.weekday() - 4) % 7
 last_friday = today - timedelta(days=days_to_friday)
-# Find the third last Friday
 third_last_friday = last_friday - timedelta(weeks=2)
 friday_date_str = third_last_friday.strftime("%m-%d-%Y")
 
+# Input the date into the date field
 date_input = driver.find_element(By.ID, 'endDate')
 desired_date = friday_date_str
 date_input.send_keys(desired_date)
 
-# Wait for the reCAPTCHA iframe to be present
+# Handle the reCAPTCHA
 recaptcha_iframe = WebDriverWait(driver, 10).until(
     EC.presence_of_element_located((By.XPATH, "//iframe[@title='reCAPTCHA']"))
 )
-
-# Switch to the reCAPTCHA iframe
 driver.switch_to.frame(recaptcha_iframe)
-
-# Wait for the reCAPTCHA checkbox to be clickable
 recaptcha_checkbox = WebDriverWait(driver, 10).until(
     EC.element_to_be_clickable((By.CSS_SELECTOR, "div.recaptcha-checkbox-border"))
 )
-
-# Click the reCAPTCHA checkbox
 recaptcha_checkbox.click()
-
-
-# Switch back to the default content
 driver.switch_to.default_content()
 
-# Wait for the "Get Report" button to be clickable
+# Click the "Get Report" button
 get_report_button = WebDriverWait(driver, 10).until(
     EC.element_to_be_clickable((By.ID, "reportsubmit"))
 )
-
-# Click the "Get Report" button
 get_report_button.click()
 
-# Add a delay to see the result
+# Add a delay to ensure the table is loaded
 time.sleep(10)
 
-all_rows = []
 # Parse the table HTML with BeautifulSoup
 soup = bs(driver.page_source, 'html.parser')
 table = soup.find('table', {'id': 'weekly-report-table'})
 
-all_rows = []
-
-# Parse the table HTML with BeautifulSoup
-soup = bs(driver.page_source, 'html.parser')
-table = soup.find('table', {'id': 'weekly-report-table'})
+# Check if the table is found
+if not table:
+    print("Table not found!")
+    driver.quit()
+    sys.exit()
 
 # Extract table headers
 headers = [th.text.strip() for th in table.find('thead').find_all('th')]
-headers.append('Inspection details')  # Add new column header
-all_rows.append(headers)
+headers.append('Inspection details')  # Add new column header for links
+all_rows = [headers]
 
 # Base URL for the inspection details links
 base_url = "https://envapp.maricopa.gov"
@@ -135,17 +116,30 @@ base_url = "https://envapp.maricopa.gov"
 for tr in table.find('tbody').find_all('tr'):
     cells = tr.find_all('td')
     row = [cell.text.strip() for cell in cells]
-    
+
     # Extract the href link from the 'Inspection date' column
     inspection_date_cell = tr.find('td', {'class': 'text-center'})
-    inspection_link = inspection_date_cell.find('a')['href']
-
-    full_link = base_url + inspection_link  # Construct full URL
     
-    row.append(full_link)  # Append the full link to the row
+    if inspection_date_cell:
+        a_tag = inspection_date_cell.find('a')
+        
+        if not a_tag:
+            print(f"No <a> tag found in the 'text-center' cell: {inspection_date_cell}")
+            full_link = None
+        else:
+            inspection_link = a_tag['href']
+            full_link = base_url + inspection_link  # Construct full URL
+        
+        # Append the full link to the row
+        row.append(full_link)
+    else:
+        # Report if no 'text-center' cell is found (unlikely as per your description)
+        print(f"No 'text-center' cell found in this row: {tr}")
+        row.append(None)
+
     all_rows.append(row)
 
-# Iterate over each page
+# Pagination Handling
 while True:
     try:
         # Find the pagination container
@@ -160,7 +154,7 @@ while True:
         # Scroll the next page button into view and click
         driver.execute_script("arguments[0].scrollIntoView();", next_page_button)
 
-        # Attempt to click the next page button
+        # Click the next page button
         attempts = 0
         while attempts < 3:
             try:
@@ -176,7 +170,7 @@ while True:
         # Parse the new page's HTML with BeautifulSoup
         soup = bs(driver.page_source, 'html.parser')
         table = soup.find('table', {'id': 'weekly-report-table'})
-        
+
         # Scrape data from the current page
         for tr in table.find('tbody').find_all('tr'):
             cells = tr.find_all('td')
@@ -184,29 +178,44 @@ while True:
             
             # Extract the href link from the 'Inspection date' column
             inspection_date_cell = tr.find('td', {'class': 'text-center'})
-            inspection_link = inspection_date_cell.find('a')['href']
-            full_link = base_url + inspection_link  # Construct full URL
             
-            row.append(full_link)  # Append the full link to the row
+            if inspection_date_cell:
+                a_tag = inspection_date_cell.find('a')
+                
+                if not a_tag:
+                    print(f"No <a> tag found in the 'text-center' cell: {inspection_date_cell}")
+                    full_link = None
+                else:
+                    inspection_link = a_tag['href']
+                    full_link = base_url + inspection_link  # Construct full URL
+                
+                # Append the full link to the row
+                row.append(full_link)
+            else:
+                print(f"No 'text-center' cell found in this row: {tr}")
+                row.append(None)
+
             all_rows.append(row)
         
     except Exception as e:
         print(f"Finished scraping. Last page reached or an error occurred: {e}")
         break
 
-# Create a DataFrame
+# Create a DataFrame from the scraped data
 df = pd.DataFrame(all_rows[1:], columns=all_rows[0])
 
+# Quit the driver after the scraping and updating is complete
 driver.quit()
 
-df['Address'] = df['Address'].str.strip()
-df['Address'] = df['Address'] + ', ' + df.City + ', ' + 'AZ'
+# Data cleaning and processing
+df['Address'] = df['Address'].str.strip() + ', ' + df['City'] + ', AZ'
 
-# Limit dataset to only E & D type
+# Limit dataset to only 'Eating & Drinking' permit type
 df2 = df[df['Permit Type'] == 'Eating & Drinking']
 
-# Filter out restaurant chains that are not mom and pop
-df3 = df2[~df2['Business Name'].str.contains("Target|AMC Threatres|Arby's|Walmart|Wal-Mart|Hilton|Kyoto|Waffle House|Barro's Pizza|Clinic|Living Center|Hospice|Children|School|Food City|7-Eleven|Sheraton Phoenix Airport Hotel|Fitness|Cold Stone|Chipotle Mexican Grill|Papa Johns|Five Guys Burgers|Albertson's|Senior Living|Assisted Living|McDonald's|Church|El Sabroso Hot-Dog|\
+# Filter out restaurant chains that are not "mom and pop" establishments
+df3 = df2[~df2['Business Name'].str.contains(
+    "Target|AMC Threatres|Arby's|Walmart|Wal-Mart|Hilton|Kyoto|Waffle House|Barro's Pizza|Clinic|Living Center|Hospice|Children|School|Food City|7-Eleven|Sheraton Phoenix Airport Hotel|Fitness|Cold Stone|Chipotle Mexican Grill|Papa Johns|Five Guys Burgers|Albertson's|Senior Living|Assisted Living|McDonald's|Church|El Sabroso Hot-Dog|\
                                 Cafe|Coffee|Safeway|Edible Arrangements|ATL Wings|Del Taco|Wienerschnitzel|Church|Resort|Club|Whataburger|\
                                 Streets|American Legion|Wingstop|Jamba Juice|Marriott|Pizza Patron|Carl's Jr|\
                                 Church's Chicken|Canyon|Applebees|Arco|Sonic Drive|Pizza Hut|Raising Canes|Little Caesars|Aldo's|Frys|\
@@ -215,7 +224,6 @@ df3 = df2[~df2['Business Name'].str.contains("Target|AMC Threatres|Arby's|Walmar
                                 Safeway|Little Caesar's|Panda Express|Lucky Lou's|Filibertos|Filiberto's|Bosa Donuts|Starbucks|\
                                 Chipotle|Golf|Subway|Outback Steakhouse|Shell|AJ's Fine Foods|McDonalds|Jimmy John|Ice Cream|Market|Inn|Suites|LLC|Deli|Denny's|College|Farms|Farm|\
                                 Popeyes|Express|Panera Bread|ARCO|Senior", case=False, regex=True)].copy()
-
 
 # Number of restaurants inspected this week
 ins = df['Permit ID'].count()
@@ -237,7 +245,7 @@ else:
 # Use the environment variable for the API key
 api_key = os.getenv('GOOGLE_MAPS_API_KEY')
 
-# Rest of your geocoding logic remains the same
+# Geocoding logic remains the same
 base_url = 'https://maps.googleapis.com/maps/api/geocode/json?'
 
 def geocode_address(address, api_key):
@@ -267,21 +275,15 @@ df4['Priority Violation'] = df4['Priority Violation'].astype(str)
 df4['Priority Violation'] = 'Priority violations: ' + df4['Priority Violation']
 df4b = df4[['Business Name', 'latitude', 'longitude', 'Address', 'Inspection date', 'Priority Violation']].copy()
 
-# A rated restaurants
-df5 = df3[(df3.Grade == "A")]
+# A-rated restaurants
+df5 = df3[df3.Grade == "A"]
 summary_data.append([f"{len(df5)} restaurants were rated 'A'"])
 
-# Phoenix A-rated restaurants
+# Separate A-rated restaurants by region
 df5a = df5[df5.City == "Phoenix"]
-
-# Scottsdale A-rated restaurants
 df5b = df5[df5.City == "Scottsdale"]
-
-# East Valley
 east = ['Apache Junction', 'Chandler', 'Gilbert', 'Mesa', 'Queen Creek', 'Tempe']
 df5c = df5[df5.City.isin(east)]
-
-# West Valley
 west = ['Goodyear', 'Avondale', 'Buckeye', 'Tolleson', 'Sun City', 'Wickenburg', 'Glendale', 'Surprise']
 df5d = df5[df5.City.isin(west)]
 
@@ -293,14 +295,13 @@ sheet_east_valley = sheet.worksheet('eastValley')
 sheet_west_valley = sheet.worksheet('westValley')
 sheet_summary = sheet.worksheet('Summary')
 
-# Convert DataFrame to list of lists
+# Convert DataFrame to list of lists and update Google Sheets
 data_list_4b = df4b.values.tolist()
 data_list_5a = df5a.values.tolist()
 data_list_5b = df5b.values.tolist()
 data_list_5c = df5c.values.tolist()
 data_list_5d = df5d.values.tolist()
 
-# Update the Google Sheets
 sheet_top_violators.update('A1', [df4b.columns.values.tolist()] + data_list_4b)
 sheet_phoenix.update('A1', [df5a.columns.values.tolist()] + data_list_5a)
 sheet_scottsdale.update('A1', [df5b.columns.values.tolist()] + data_list_5b)
