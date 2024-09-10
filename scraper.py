@@ -7,6 +7,7 @@ import io
 import os
 import numpy as np
 import requests
+import sys
 from datetime import timedelta, datetime
 import gspread
 from selenium import webdriver
