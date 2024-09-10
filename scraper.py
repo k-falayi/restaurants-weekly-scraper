@@ -4,6 +4,7 @@ import json
 import time
 import io
 import os
+import sys
 import requests
 from datetime import timedelta, datetime
 import gspread
