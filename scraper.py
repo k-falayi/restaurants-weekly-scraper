@@ -69,6 +69,7 @@ days_to_friday = (today.weekday() - 4) % 7
 last_friday = today - timedelta(days=days_to_friday)
 third_last_friday = last_friday - timedelta(weeks=2)
 friday_date_str = third_last_friday.strftime("%m-%d-%Y")
+print(friday_date_str)
 
 # Input the date into the date field
 date_input = driver.find_element(By.ID, 'endDate')
@@ -226,8 +227,7 @@ df['Address'] = df['Address'].str.strip() + ', ' + df['City'] + ', AZ'
 df2 = df[df['Permit Type'] == 'Eating & Drinking']
 
 # Filter out restaurant chains that are not "mom and pop" establishments
-df3 = df2[~df2['Business Name'].str.contains(
-    "Target|AMC Threatres|Arby's|Walmart|Wal-Mart|Hilton|Kyoto|Waffle House|Barro's Pizza|Clinic|Living Center|Hospice|Children|School|Food City|7-Eleven|Sheraton Phoenix Airport Hotel|Fitness|Cold Stone|Chipotle Mexican Grill|Papa Johns|Five Guys Burgers|Albertson's|Senior Living|Assisted Living|McDonald's|Church|El Sabroso Hot-Dog|\
+df3 = df2[~df2['Business Name'].str.contains("Costco|Brewing|Arby's|Banner|AM/PM|Boba & Donuts|Dairy Queen|Theatre|Salad n Go|Popeye's|Papa John's Pizza|Children|School|Food City|7-Eleven|Sheraton Phoenix Airport Hotel|Fitness|Cold Stone|Chipotle Mexican Grill|Papa Johns|Five Guys Burgers|Albertson's|Senior Living|Assisted Living|McDonald's|Church|El Sabroso Hot-Dog|\
                                 Cafe|Coffee|Safeway|Edible Arrangements|ATL Wings|Del Taco|Wienerschnitzel|Church|Resort|Club|Whataburger|\
                                 Streets|American Legion|Wingstop|Jamba Juice|Marriott|Pizza Patron|Carl's Jr|\
                                 Church's Chicken|Canyon|Applebees|Arco|Sonic Drive|Pizza Hut|Raising Canes|Little Caesars|Aldo's|Frys|\
