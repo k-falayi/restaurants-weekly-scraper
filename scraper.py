@@ -138,8 +138,7 @@ for tr in table.find('tbody').find_all('tr'):
     
     # Extract the href link from the 'Inspection date' column
     inspection_date_cell = tr.find('td', {'class': 'text-center'})
-    inspection_link = inspection_date_cell.a.get('href')
-    # inspection_link = inspection_date_cell.find('a')['href']
+    inspection_link = inspection_date_cell.find('a')['href']
 
     full_link = base_url + inspection_link  # Construct full URL
     
