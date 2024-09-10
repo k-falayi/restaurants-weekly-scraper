@@ -8,6 +8,7 @@ import os
 import numpy as np
 import requests
 from datetime import timedelta, datetime
+import gspread
 from selenium import webdriver
 from webdriver_manager.chrome import ChromeDriverManager
 from webdriver_manager.core.os_manager import ChromeType
@@ -16,10 +17,25 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import ElementClickInterceptedException
-from bs4 import BeautifulSoup as bs
 from oauth2client.service_account import ServiceAccountCredentials
-import gspread
+
+chrome_service = Service(ChromeDriverManager(chrome_type=ChromeType.CHROMIUM).install())
+
+chrome_options = Options()
+options = [
+    "--headless",
+    "--disable-gpu",
+    "--window-size=1920,1200",
+    "--ignore-certificate-errors",
+    "--disable-extensions",
+    "--no-sandbox",
+    "--disable-dev-shm-usage"
+]
+for option in options:
+    chrome_options.add_argument(option)
+
+driver = webdriver.Chrome(service=chrome_service, options=chrome_options)
+
 
 # Define the scope
 scope = ["https://spreadsheets.google.com/feeds", 'https://www.googleapis.com/auth/spreadsheets',
@@ -38,20 +54,6 @@ client = gspread.authorize(creds)
 # Get the Google Sheet
 sheet = client.open('Restaurant_inspection_database(auto_scraper)')
 
-chrome_service = Service(ChromeDriverManager(chrome_type=ChromeType.CHROMIUM).install())
-
-chrome_options = Options()
-options = [
-    "--headless",
-    "--disable-gpu",
-    "--window-size=1920,1200",
-    "--ignore-certificate-errors",
-    "--disable-extensions",
-    "--no-sandbox",
-    "--disable-dev-shm-usage"
-]
-for option in options:
-    chrome_options.add_argument(option)
 
 # Add preferences
 prefs = {
@@ -59,7 +61,6 @@ prefs = {
 }
 chrome_options.add_experimental_option('prefs', prefs)
 
-driver = webdriver.Chrome(service=chrome_service, options=chrome_options)
 
 # Navigate to the desired URL
 driver.get("https://envapp.maricopa.gov/Report/WeeklyReport")
