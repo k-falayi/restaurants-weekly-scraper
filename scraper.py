@@ -114,30 +114,35 @@ base_url = "https://envapp.maricopa.gov"
 
 # Scrape data from the first page
 for tr in table.find('tbody').find_all('tr'):
+    # Skip rows with the 'No data available' message
+    if 'No data available' in tr.text:
+        continue
+    
     cells = tr.find_all('td')
     row = [cell.text.strip() for cell in cells]
 
-    # Extract the href link from the 'Inspection date' column
-    inspection_date_cell = tr.find('td', {'class': 'text-center'})
-    
-    if inspection_date_cell:
-        a_tag = inspection_date_cell.find('a')
+    # Ensure the row has the correct number of columns before adding the link
+    if len(row) == len(headers) - 1:  # The link is an extra column, so -1
+        # Extract the href link from the 'Inspection date' column
+        inspection_date_cell = tr.find('td', {'class': 'text-center'})
         
-        if not a_tag:
-            print(f"No <a> tag found in the 'text-center' cell: {inspection_date_cell}")
-            full_link = None
+        if inspection_date_cell:
+            a_tag = inspection_date_cell.find('a')
+            
+            if not a_tag:
+                print(f"No <a> tag found in the 'text-center' cell: {inspection_date_cell}")
+                full_link = None
+            else:
+                inspection_link = a_tag['href']
+                full_link = base_url + inspection_link  # Construct full URL
+            
+            # Append the full link to the row
+            row.append(full_link)
         else:
-            inspection_link = a_tag['href']
-            full_link = base_url + inspection_link  # Construct full URL
-        
-        # Append the full link to the row
-        row.append(full_link)
-    else:
-        # Report if no 'text-center' cell is found (unlikely as per your description)
-        print(f"No 'text-center' cell found in this row: {tr}")
-        row.append(None)
+            print(f"No 'text-center' cell found in this row: {tr}")
+            row.append(None)
 
-    all_rows.append(row)
+        all_rows.append(row)
 
 # Pagination Handling
 while True:
@@ -173,29 +178,34 @@ while True:
 
         # Scrape data from the current page
         for tr in table.find('tbody').find_all('tr'):
+            # Skip rows with the 'No data available' message
+            if 'No data available' in tr.text:
+                continue
+
             cells = tr.find_all('td')
             row = [cell.text.strip() for cell in cells]
-            
-            # Extract the href link from the 'Inspection date' column
-            inspection_date_cell = tr.find('td', {'class': 'text-center'})
-            
-            if inspection_date_cell:
-                a_tag = inspection_date_cell.find('a')
-                
-                if not a_tag:
-                    print(f"No <a> tag found in the 'text-center' cell: {inspection_date_cell}")
-                    full_link = None
-                else:
-                    inspection_link = a_tag['href']
-                    full_link = base_url + inspection_link  # Construct full URL
-                
-                # Append the full link to the row
-                row.append(full_link)
-            else:
-                print(f"No 'text-center' cell found in this row: {tr}")
-                row.append(None)
 
-            all_rows.append(row)
+            # Ensure the row has the correct number of columns before adding the link
+            if len(row) == len(headers) - 1:
+                inspection_date_cell = tr.find('td', {'class': 'text-center'})
+                
+                if inspection_date_cell:
+                    a_tag = inspection_date_cell.find('a')
+                    
+                    if not a_tag:
+                        print(f"No <a> tag found in the 'text-center' cell: {inspection_date_cell}")
+                        full_link = None
+                    else:
+                        inspection_link = a_tag['href']
+                        full_link = base_url + inspection_link  # Construct full URL
+                    
+                    # Append the full link to the row
+                    row.append(full_link)
+                else:
+                    print(f"No 'text-center' cell found in this row: {tr}")
+                    row.append(None)
+
+                all_rows.append(row)
         
     except Exception as e:
         print(f"Finished scraping. Last page reached or an error occurred: {e}")
